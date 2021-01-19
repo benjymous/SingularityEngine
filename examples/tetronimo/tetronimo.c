@@ -4,13 +4,14 @@ SpriteHandle handles[4];
 
 void Init(void)
 {
-	float x = 124;
-	float y = 0;
+	SENumber x = 120;
+	SENumber y = 4;
 
 	handles[0] = SE_CreateSprite(x, y, 8, 8);
 	handles[1] = SE_CreateSprite(x+8, y, 8, 8); 
 	handles[2] = SE_CreateSprite(x+8, y+8, 8, 8); 
 	handles[3] = SE_CreateSprite(x+16, y+8, 8, 8); 
+	
 }
 
 void Shutdown(void)
@@ -21,32 +22,32 @@ void Shutdown(void)
 	}
 }
 
-float dx = 0.0f;
-float dy = 16.0f;
+SENumber dx = 0;
+SENumber dy = 1;
 
-int Update(float frametime)
+int Update(SENumber frametime)
 {
 	enum Gamepad gp = SE_GetGamepad();
 
 	dx = 0;
-	dy = 16.0f;
-	if (gp & Left)
+	dy = 1;
+	if (gp & SE_Gamepad_Left)
 	{
-		dx = -32;
+		dx = -1;
 	}
-	else if (gp & Right)
+	else if (gp & SE_Gamepad_Right)
 	{
-		dx = 32;
+		dx = 1;
 	}
 
-	if (gp & Down)
+	if (gp & SE_Gamepad_Down)
 	{
-		dy = 32;
+		dy = 2;
 	}
 
 	for (int i = 0; i < 4; ++i)
 	{
-		SE_MoveSpriteRel(handles[i], dx * frametime, dy * frametime);
+		SE_MoveSpriteRel(handles[i], frametime, dx, dy);
 	}
 
 	return 1;

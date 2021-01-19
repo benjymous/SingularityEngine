@@ -26,13 +26,13 @@ extern "C" {
 
     void Init();
     void Shutdown();
-    int Update(float frametime);
+    int Update(SENumber frametime);
 
     int gamepadVal = 0;
 
-    enum Gamepad SE_GetGamepad(void)
+    int SE_GetGamepad(void)
     {
-        return (Gamepad)gamepadVal;
+        return gamepadVal;
     }
 
     SpriteHandle SE_CreateSprite(float x, float y, float w, float h)
@@ -43,9 +43,9 @@ extern "C" {
         return index;
     }
 
-    void SE_MoveSpriteRel(SpriteHandle index, float dx, float dy)
+    void SE_MoveSpriteRel(SpriteHandle index, float frametime, float dx, float dy)
     {
-        sprites[index].position += glm::vec2(dx,dy);
+        sprites[index].position += glm::vec2(dx*frametime, dy*frametime);
     }
 
     void SE_DestroySprite(SpriteHandle handle)
@@ -138,28 +138,28 @@ MessageCallback(GLenum source,
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     if ((key == GLFW_KEY_A || key == GLFW_KEY_LEFT) && action == GLFW_PRESS)
-        gamepadVal |= Gamepad::Left;
+        gamepadVal |= SE_Gamepad_Left;
 
     if ((key == GLFW_KEY_A || key == GLFW_KEY_LEFT) && action == GLFW_RELEASE)
-        gamepadVal &= ~Gamepad::Left;
+        gamepadVal &= ~SE_Gamepad_Left;
 
     if ((key == GLFW_KEY_D || key == GLFW_KEY_RIGHT) && action == GLFW_PRESS)
-        gamepadVal |= Gamepad::Right;
+        gamepadVal |= SE_Gamepad_Right;
 
     if ((key == GLFW_KEY_D || key == GLFW_KEY_RIGHT) && action == GLFW_RELEASE)
-        gamepadVal &= ~Gamepad::Right;
+        gamepadVal &= ~SE_Gamepad_Right;
 
     if ((key == GLFW_KEY_W || key == GLFW_KEY_UP) && action == GLFW_PRESS)
-        gamepadVal |= Gamepad::Up;
+        gamepadVal |= SE_Gamepad_Up;
 
     if ((key == GLFW_KEY_W || key == GLFW_KEY_UP) && action == GLFW_RELEASE)
-        gamepadVal &= ~Gamepad::Up;
+        gamepadVal &= ~SE_Gamepad_Up;
 
     if ((key == GLFW_KEY_S || key == GLFW_KEY_DOWN) && action == GLFW_PRESS)
-        gamepadVal |= Gamepad::Down;
+        gamepadVal |= SE_Gamepad_Down;
 
     if ((key == GLFW_KEY_S || key == GLFW_KEY_DOWN) && action == GLFW_RELEASE)
-        gamepadVal &= ~Gamepad::Down;
+        gamepadVal &= ~SE_Gamepad_Down;
 }
 
 int main(void)
@@ -271,7 +271,7 @@ int main(void)
 
     bool running = true;
 
-    const float frametime = 1.0f / 60.0f;
+    const float frametime = 1.0f;// / 60.0f;
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window) && running)
