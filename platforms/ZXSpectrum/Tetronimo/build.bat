@@ -1,2 +1,2 @@
 mkdir build
-make
+make TITLE_NAME=tetronimo

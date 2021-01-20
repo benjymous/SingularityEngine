@@ -2,6 +2,8 @@
 #ifndef SINGULARITY_H
 #define SINGULARITY_H
 
+#include <stdlib.h>
+
 #include "SingularityPlatformDefs.h"
 
 // These intentionally match the z88dk input values
@@ -17,8 +19,16 @@ typedef int SpriteHandle;
 
 int SE_GetGamepad(void);
 
-SpriteHandle SE_CreateSprite(SENumber x, SENumber y, SENumber w, SENumber h);
-void SE_MoveSpriteRel(SpriteHandle handle, SENumber frametime, SENumber dx, SENumber dy);
+SpriteHandle SE_CreateSprite(SENumber x, SENumber y, int w, int h, int image);
+void SE_MoveSpriteAbs(SpriteHandle handle, SENumber x, SENumber y);
+void SE_MoveSpriteRel(SpriteHandle handle, SENumber dx, SENumber dy);
+void SE_SetSpriteImage(SpriteHandle handle, int image);
+void SE_GetSpritePos(SpriteHandle handle, SENumber* x, SENumber* y);
 void SE_DestroySprite(SpriteHandle handle);
+
+
+void SE_PutTile(int x, int y, int tile);
+
+int SE_BoundaryDistance(SENumber val, int mod);
 
 #endif

@@ -1,16 +1,23 @@
+# provide TITLE_NAME via commandline
+# e.g.
+# > make TITLE_NAME=tetronimo
+
 CC=zcc
 AS=zcc
 TARGET=+zx
 VERBOSITY=-vn
 CRT=31
-EXDIR = ../../../examples
+
+ROOTDIR = ../../..
+EXDIR = $(ROOTDIR)/examples/$(TITLE_NAME)
+PLATDIR = ..
 SRCDIR = src
 DATDIR = data
 OBJDIR = build
 
 PRAGMA_FILE=$(SRCDIR)/zpragma.h
 
-C_OPT_FLAGS=-SO3 -I../../../include -I../include
+C_OPT_FLAGS=-SO3 -I$(ROOTDIR)/include -I$(PLATDIR)/include
 
 OUT_FLAGS = --c-code-in-asm --list
 
@@ -20,26 +27,35 @@ CFLAGS=$(TARGET) $(VERBOSITY) -c $(C_OPT_FLAGS) -clib=new -pragma-include:$(PRAG
 LDFLAGS=$(TARGET) $(VERBOSITY) -clib=new -pragma-include:$(PRAGMA_FILE)  --fverbose-asm -m 
 ASFLAGS=$(TARGET) $(VERBOSITY) -c
 
-EXEC_OUTPUT=tetronimo
-EXEC=$(EXEC_OUTPUT).tap
+
+EXEC=$(TITLE_NAME).tap
 
 all : $(EXEC)
 
-OBJECTS = 	$(OBJDIR)/$(EXEC_OUTPUT).o \
+OBJECTS = 	$(OBJDIR)/$(TITLE_NAME).o \
 			$(OBJDIR)/zxmain.o \
-			$(OBJDIR)/assets.o
+			$(OBJDIR)/int.o \
+			$(OBJDIR)/graphics.o
 
-$(OBJDIR)/$(EXEC_OUTPUT).o: $(EXDIR)/$(EXEC_OUTPUT)/$(EXEC_OUTPUT).c $(PRAGMA_FILE)
+# .c files in the platforms/zxspectrum/<name>/src/ folder
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(PRAGMA_FILE)
 	$(CC) $(CFLAGS) -o $@ $<
 
-$(OBJDIR)/zxmain.o: ../zxmain.c $(PRAGMA_FILE)
+# .c files in the Examples/<name>/ folder
+$(OBJDIR)/%.o: $(EXDIR)/%.c $(PRAGMA_FILE)
 	$(CC) $(CFLAGS) -o $@ $<
 
+# .c files in the platforms/zxspectrum/ folder
+$(OBJDIR)/%.o: $(PLATDIR)/%.c $(PRAGMA_FILE)
+	$(CC) $(CFLAGS) -o $@ $<
+
+# data asm files
 $(OBJDIR)/%.o: $(DATDIR)/%.asm
 	$(AS) $(ASFLAGS) -o $@ $<
 
+# final link
 $(EXEC) : $(OBJECTS) 
-	 $(CC) $(LDFLAGS) -startup=$(CRT) $(OBJECTS) -o $(EXEC_OUTPUT) $(OUT_FLAGS) -create-app $(APP_FLAGS)
+	 $(CC) $(LDFLAGS) -startup=$(CRT) $(OBJECTS) -o $(TITLE_NAME) $(OUT_FLAGS) -create-app $(APP_FLAGS)
 
 .PHONY: clean
 clean:

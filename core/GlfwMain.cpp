@@ -26,7 +26,7 @@ extern "C" {
 
     void Init();
     void Shutdown();
-    int Update(SENumber frametime);
+    int Update();
 
     int gamepadVal = 0;
 
@@ -35,7 +35,7 @@ extern "C" {
         return gamepadVal;
     }
 
-    SpriteHandle SE_CreateSprite(float x, float y, float w, float h)
+    SpriteHandle SE_CreateSprite(float x, float y, int w, int h, int image)
     {
         int index = numSprites++;
         sprites[index].position = { x, y };
@@ -43,9 +43,25 @@ extern "C" {
         return index;
     }
 
-    void SE_MoveSpriteRel(SpriteHandle index, float frametime, float dx, float dy)
+
+    void SE_MoveSpriteAbs(SpriteHandle index, SENumber x, SENumber y)
     {
-        sprites[index].position += glm::vec2(dx*frametime, dy*frametime);
+        sprites[index].position = glm::vec2(x, y);
+    }
+
+    // Translate the 8 bit '6 bit fixed point' at 50fps into modern 60fps
+    const float fudge = 2.5; // fiddled until speed seemed to roughly match
+    const float frametime = 1.0f / 60.0f * fudge;
+
+    void SE_MoveSpriteRel(SpriteHandle index, float dx, float dy)
+    {
+        sprites[index].position += glm::vec2(dx * frametime, dy * frametime);
+    }
+
+    void SE_GetSpritePos(SpriteHandle index, SENumber* x, SENumber* y)
+    {
+        *x = sprites[index].position.x;
+        *y = sprites[index].position.y;
     }
 
     void SE_DestroySprite(SpriteHandle handle)
@@ -53,6 +69,24 @@ extern "C" {
 
     }
 
+    void SE_SetSpriteImage(SpriteHandle handle, int image)
+    {
+
+    }
+
+    void SE_PutTile(int x, int y, int tile)
+    {
+        // Temp!
+        SE_CreateSprite(x * 8, y * 8, 8, 8, 0);
+    }
+
+    int SE_BoundaryDistance(SENumber val, int mod)
+    {
+        float f = abs(fmodf(val, (float)mod));
+        if (f > mod / 2) f = mod - f;        
+
+        return (int)f;
+    }
 
 }
 
@@ -81,15 +115,14 @@ void main()
 )";
 
 float vertices[] = {
-    -0.5f, -0.5f,
-     0.5f, -0.5f,
-     0.5f,  0.5f,
+    0, 0,
+    1, 0,
+    1, 1,
 
-    -0.5f,  0.5f,
-    -0.5f, -0.5f,
-     0.5f,  0.5f
+    0, 1,
+    0, 0,
+    1, 1
 };
-
 
 glm::mat4 projection;
 glm::mat4 view = glm::mat4(1.0f);
@@ -101,8 +134,6 @@ void reshapeWindow(GLFWwindow* window, int width, int height)
 
     const float virtualWidth = 256.0f;
     const float virtualHeight = 192.0f;
-
-
 
     const float multiplier = (float)height / virtualHeight;
 
@@ -176,8 +207,11 @@ int main(void)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    int winHeight = 720;
+    int winWidth = 1280;
+
     /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(1152, 648, "Singularity Engine", NULL, NULL);
+    window = glfwCreateWindow(winWidth, winHeight, "Singularity Engine", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -192,7 +226,9 @@ int main(void)
         return -1;
     }
 
-    reshapeWindow(window, 1152, 648);
+
+
+    reshapeWindow(window, winWidth, winHeight);
 
     // During init, enable debug output
     glEnable(GL_DEBUG_OUTPUT);
@@ -268,18 +304,14 @@ int main(void)
 
     glfwSetKeyCallback(window, keyCallback);
 
-
     bool running = true;
-
-    const float frametime = 1.0f;// / 60.0f;
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window) && running)
     {
-        running = Update(frametime) != 0;
+        running = Update() != 0;
 
         glClear(GL_COLOR_BUFFER_BIT);
-
 
         // draw our sprites
         glUseProgram(program);

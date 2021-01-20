@@ -12,9 +12,10 @@ void MemMap_UserCodeStart(){};
 
 #include "Singularity.h"
 
-//#include "int.h"
+#include "int.h"
 
-extern unsigned char circle[];
+extern unsigned char spr0_col0[];
+extern unsigned char tile0[];
 
 struct sp1_pss ps;
 
@@ -26,19 +27,20 @@ struct sp1_Rect fullrect = {0, 0, 32, 24}; // rectangle covering the full screen
 
 int frame = 0;
 
-struct pos
+struct sprs
 {
     int x;
     int y;
+    int image;
 };
 
 #define maxSprite 10
 struct sp1_ss* sprites[maxSprite];
-struct pos sprpos[maxSprite];
+struct sprs sprdat[maxSprite];
 
 void Init();
 void Shutdown();
-int Update(SENumber frametime);
+int Update();
 
 int gamepadVal = 0;
 
@@ -49,30 +51,73 @@ int SE_GetGamepad(void)
 
 int numSprites = 0;
 
-SpriteHandle SE_CreateSprite(int x, int y, int w, int h)
+SpriteHandle SE_CreateSprite(int x, int y, int w, int h, int image)
 {
     int index = numSprites++;
-    struct sp1_ss* spr = sp1_CreateSpr(SP1_DRAW_LOAD1LB, SP1_TYPE_1BYTE, 2, (int)circle, 0);
-    sp1_AddColSpr(spr, SP1_DRAW_LOAD1RB, SP1_TYPE_1BYTE, 0, 0);
+
+    struct sp1_ss* spr = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, 2, (int)spr0_col0, 0);
+    sp1_AddColSpr(spr, SP1_DRAW_MASK2RB, SP1_TYPE_2BYTE, 0, 0);
+
     sp1_MoveSprAbs(spr, &fullrect, 0, 0, 0, 0, 0);
     sp1_MoveSprPix(spr, &fullrect, 0, x, y);
+
     sprites[index] = spr;
-    sprpos[index].x = x;
-    sprpos[index].y = y;
+    sprdat[index].x = x << 5;
+    sprdat[index].y = y << 5;
+    sprdat[index].image = 32*image;
+
+    spr->frame = (void*)sprdat[index].image;
+
     return index;
 }
 
-void SE_MoveSpriteRel(SpriteHandle index, int frametime, int dx, int dy)
+void SE_MoveSpriteAbs(SpriteHandle index, int x, int y)
 {
-    sprpos[index].x += dx;
-    sprpos[index].y += dy;
-    sp1_MoveSprPix(sprites[index], &fullrect, 0, sprpos[index].x, sprpos[index].y);
-    //sprites[index].position += glm::vec2(dx*frametime, dy*frametime);
+    sprdat[index].x = x << 5;
+    sprdat[index].y = y << 5;
+    sp1_MoveSprPix(sprites[index], &fullrect, 0, x, y);
+}
+
+void SE_MoveSpriteRel(SpriteHandle index, int dx, int dy)
+{
+    sprdat[index].x += dx;
+    sprdat[index].y += dy;
+    sp1_MoveSprPix(sprites[index], &fullrect, 0, sprdat[index].x >> 5, sprdat[index].y >> 5);
+}
+
+void SE_SetSpriteImage(SpriteHandle index, int image)
+{
+    struct sp1_ss* spr = sprites[index];
+    sprdat[index].image = 32*image;
+    //se->tile = (se->startTile + se->tileFrame + (se->flip ? NUM_SPR_GFX : 0)) * SPRITE_SPACING;
+    
+}
+
+void SE_GetSpritePos(SpriteHandle index, int* x, int* y)
+{
+    *x = sprdat[index].x >> 5;
+    *y = sprdat[index].y >> 5;
 }
 
 void SE_DestroySprite(SpriteHandle handle)
 {
 
+}
+
+void SE_PutTile(int x, int y, int tile)
+{
+    sp1_PrintAt(y, x-1, INK_BLACK | PAPER_WHITE, tile0);
+    struct sp1_Rect tilerect;
+    tilerect.row = y;
+    tilerect.col = x;
+    tilerect.width = 1;
+    tilerect.height = 1;
+    sp1_Invalidate(&tilerect);
+}
+
+int SE_BoundaryDistance(SENumber val, int mod)
+{
+    return val % mod;
 }
 
 main()
@@ -81,10 +126,10 @@ main()
 
     intrinsic_di(); // inline di instruction without impeding the optimizer
 
-    zx_border(INK_BLUE);
+    zx_border(INK_RED);
 
     // Initialize SP1.LIB
-    sp1_Initialize(SP1_IFLAG_MAKE_ROTTBL | SP1_IFLAG_OVERWRITE_TILES | SP1_IFLAG_OVERWRITE_DFILE, INK_WHITE | PAPER_BLACK, ' ');
+    sp1_Initialize(SP1_IFLAG_MAKE_ROTTBL | SP1_IFLAG_OVERWRITE_TILES | SP1_IFLAG_OVERWRITE_DFILE, INK_BLACK | PAPER_WHITE, ' ');
 
     sp1_Invalidate(&fullrect);
 
@@ -93,10 +138,12 @@ main()
     ps.visit = 0;
     ps.attr = INK_WHITE | PAPER_BLACK;
     ps.attr_mask = SP1_AMASK_TRANS;
+    
+    zx_border(INK_GREEN);
 
     Init();
 
-    zx_border(INK_GREEN);
+    zx_border(INK_BLUE);
 
     // initialise input
     keys.fire = in_key_scancode('m');
@@ -108,7 +155,7 @@ main()
     static char buffer[10];
 
     // interrupt mode 2
-    //setup_int();
+    setup_int();
 
     zx_border(INK_BLACK);
 
@@ -116,43 +163,33 @@ main()
     {
         gamepadVal = in_stick_keyboard(&keys);
 
-        //zx_border(INK_RED);
-        Update(1);
-        //zx_border(INK_YELLOW);
+        zx_border(INK_CYAN);
 
-        sp1_UpdateNow(); // draw screen now
-        //zx_border(INK_BLACK);
+        // Call game's Update function
+        Update(); 
 
-        //switch (frame % 10)
-        //{
-            //case 0:
-            //{
-            //    itoa(debugVal/10, buffer, 10);
-            //    debugVal = 0;
-            //    sp1_SetPrintPos(&ps, 0, 1);
-            //    sp1_PrintString(&ps, buffer);
-            //    sp1_PrintString(&ps, "  ");
-            //}
-            //break;
-            // case 1:
-            // {
-            //     for (int y = 0; y < 10; ++y)
-            //     {
-            //         for (int x = 0; x < 10; ++x)
-            //         {
-            //             int m = GETMAP(y, x);
-            //             if (m==6) 
-            //             {
-            //                 DrawTile((x * 2) + 6, (y * 2) + 2, randomInt(10)<5 ? 6 : 15);
-            //             }
-            //         }
-            //     }
-            //     sp1_Invalidate(&gamerect);
-            // }
-            // break;
-        //}
+        zx_border(INK_YELLOW);
+
+        // Draw sprites
+        sp1_UpdateNow();
+
+        zx_border(INK_BLACK);
+
+        // // frame time debug
+        // switch (frame % 10)
+        // {
+        //     case 0:
+        //     {
+        //        itoa(debugVal/10, buffer, 10);
+        //        debugVal = 0;
+        //        sp1_SetPrintPos(&ps, 0, 1);
+        //        sp1_PrintString(&ps, buffer);
+        //        sp1_PrintString(&ps, "  ");
+        //     }
+        //     break;
+        // }
 
         frame++;
-        //debugVal += wait();
+        debugVal += wait(1); // wait for next vblank
     }
 }
