@@ -1,0 +1,1 @@
+"C:\Program Files (x86)\Fuse\fuse.exe" tetronimo.tap

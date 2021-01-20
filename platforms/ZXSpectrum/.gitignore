@@ -1,0 +1,7 @@
+build
+*.tap
+*_CODE.bin
+*_UNASSIGNED.bin
+zcc_opt.def
+*.map
+*.lis
