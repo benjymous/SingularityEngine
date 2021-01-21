@@ -56,16 +56,29 @@ int nextPiece[NUM_PIECES] = {
 	6
 };
 
-int pieceOffsetBottom[NUM_PIECES] =
+int pieceOffsetLeft[NUM_PIECES] =
 {
+	1,
 	0,
 	1,
 	1,
 	1,
 	1,
 	1,
+	1
+};
+
+
+int pieceOffsetRight[NUM_PIECES] =
+{
+	2,
+	0,
 	1,
-	0
+	0,
+	1,
+	0,
+	1,
+	1
 };
 
 char playfield[10][24];
@@ -83,10 +96,10 @@ char checkPlayfield(int x, int y)
 	return playfield[x][y];
 }
 
-void setPlayfield(int x, int y)
+void setPlayfield(int x, int y, int i)
 {
 	playfield[x][y] = 1;
-	SE_PutTile(x + 11, y, 1);
+	SE_PutTile(x + 11, y, i-1);
 }
 
 int piece = 0;
@@ -104,9 +117,6 @@ void Init(void)
 		}
 	}
 
-	setPlayfield(0,0);
-	setPlayfield(9,0);
-
 	piece = rand() % NUM_PIECES;
 	for (int i = 0; i < 4; ++i)
 	{
@@ -119,7 +129,7 @@ void SetPiece()
 	for (int i = 0; i < 4; ++i)
 	{
 		SE_MoveSpriteAbs(handles[i], pieceX + (pieces[piece][i*2]*8), pieceY + (pieces[piece][(i*2)+1]*8));
-		SE_SetSpriteImage(handles[i], 0);
+		SE_SetSpriteImage(handles[i], piece/2);
 	}
 }
 
@@ -142,6 +152,8 @@ int Update()
 
 	dy = 8; // 8 "pixels" per second
 
+	int bd = SE_BoundaryDistance(pieceX, 8);
+
 	if (gp & SE_Gamepad_Left)
 	{
 		dx = -32;
@@ -152,7 +164,19 @@ int Update()
 	}
 	else
 	{
-		if (SE_BoundaryDistance(pieceX, 8) == 0)
+		if (bd == 0)
+		{
+			dx = 0;
+		}
+	}
+
+	if (dx !=0 && bd == 0)
+	{
+		if (dx < 0 && (int)(pieceX/8) - pieceOffsetLeft[piece] == 10)
+		{
+			dx = 0;
+		} 
+		else if (dx > 0 && (int)(pieceX / 8) + pieceOffsetRight[piece] == 19)
 		{
 			dx = 0;
 		}
@@ -202,7 +226,7 @@ int Update()
 		// paint piece into background
 		for (int i = 0; i < 4; ++i)
 		{
-			setPlayfield(x + pieces[piece][i * 2], y + pieces[piece][(i * 2) + 1]);
+			setPlayfield(x + pieces[piece][i * 2], y + pieces[piece][(i * 2) + 1], 1+(piece/2));
 		}
 
 		// new piece

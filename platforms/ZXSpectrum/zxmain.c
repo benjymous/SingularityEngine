@@ -29,13 +29,12 @@ int frame = 0;
 
 struct sprs
 {
+    struct sp1_ss* s;
     int x;
     int y;
-    int image;
 };
 
 #define maxSprite 10
-struct sp1_ss* sprites[maxSprite];
 struct sprs sprdat[maxSprite];
 
 void Init();
@@ -61,12 +60,11 @@ SpriteHandle SE_CreateSprite(int x, int y, int w, int h, int image)
     sp1_MoveSprAbs(spr, &fullrect, 0, 0, 0, 0, 0);
     sp1_MoveSprPix(spr, &fullrect, 0, x, y);
 
-    sprites[index] = spr;
+    sprdat[index].s = spr;
     sprdat[index].x = x << 5;
     sprdat[index].y = y << 5;
-    sprdat[index].image = 32*image;
 
-    spr->frame = (void*)sprdat[index].image;
+    spr->frame = 32*image;
 
     return index;
 }
@@ -75,22 +73,19 @@ void SE_MoveSpriteAbs(SpriteHandle index, int x, int y)
 {
     sprdat[index].x = x << 5;
     sprdat[index].y = y << 5;
-    sp1_MoveSprPix(sprites[index], &fullrect, 0, x, y);
+    sp1_MoveSprPix(sprdat[index].s, &fullrect, 0, x, y);
 }
 
 void SE_MoveSpriteRel(SpriteHandle index, int dx, int dy)
 {
     sprdat[index].x += dx;
     sprdat[index].y += dy;
-    sp1_MoveSprPix(sprites[index], &fullrect, 0, sprdat[index].x >> 5, sprdat[index].y >> 5);
+    sp1_MoveSprPix(sprdat[index].s, &fullrect, 0, sprdat[index].x >> 5, sprdat[index].y >> 5);
 }
 
 void SE_SetSpriteImage(SpriteHandle index, int image)
 {
-    struct sp1_ss* spr = sprites[index];
-    sprdat[index].image = 32*image;
-    //se->tile = (se->startTile + se->tileFrame + (se->flip ? NUM_SPR_GFX : 0)) * SPRITE_SPACING;
-    
+    sprdat[index].s->frame = 32*image;
 }
 
 void SE_GetSpritePos(SpriteHandle index, int* x, int* y)
@@ -106,7 +101,7 @@ void SE_DestroySprite(SpriteHandle handle)
 
 void SE_PutTile(int x, int y, int tile)
 {
-    sp1_PrintAt(y, x-1, INK_BLACK | PAPER_WHITE, tile0);
+    sp1_PrintAt(y, x-1, INK_BLACK | PAPER_WHITE, tile0+(tile*8));
     struct sp1_Rect tilerect;
     tilerect.row = y;
     tilerect.col = x;
